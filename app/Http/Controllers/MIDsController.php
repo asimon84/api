@@ -2,8 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Response;
-
 class MIDsController extends APIController
 {
     protected $table = 'mids';
@@ -11,4 +9,6 @@ class MIDsController extends APIController
     protected $class = 'App\\API\\MIDs\\MIDs';
 
     protected $fields_class = 'App\\API\\MIDs\\MIDsFields';
+
+    protected $identifier_field = 'mid';
 }

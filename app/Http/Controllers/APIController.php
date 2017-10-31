@@ -6,6 +6,11 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\JsonResponse;
 use App\API\Response\Response;
+use App\API\Clients\Clients;
+use App\API\Products\Products;
+use App\API\MIDs\MIDs;
+use App\API\CreditCards\CardAssociations;
+use App\API\Currencies\Currencies;
 
 class APIController extends Controller
 {
@@ -28,15 +33,7 @@ class APIController extends Controller
         $user_id = (isset($request->user()->id)) ? $request->user()->id : null;
 
         if(isset($user_id) && is_numeric($user_id)) {
-
-            $this->data = DB::table($this->table . ' as x')
-                ->join('clients', function ($join) use ($user_id) {
-                    $join->on('x.client_id', '=', 'clients.id')
-                        ->where('clients.user_id', '=', $user_id);
-                })
-                ->select('x.*')
-                ->get()
-                ->toArray();
+            $this->data = DB::table($this->table)->get()->toArray();
 
             if(is_array($this->data)) {
                 $this->success = true;
@@ -62,15 +59,9 @@ class APIController extends Controller
         if(isset($user_id) && is_numeric($user_id)) {
             $class = $this->class;
 
-            if($this->table === 'clients') {
-                $this->data = $class::where([['user_id', $user_id], ['id', '=', $id]])
-                    ->get()
-                    ->toArray();
-            } else {
-                $this->data = $class::where('id', '=', $id)
-                    ->get()
-                    ->toArray();
-            }
+            $this->data = $class::where('id', '=', $id)
+                ->get()
+                ->toArray();
 
             if(is_array($this->data)) {
                 $this->success = true;
@@ -121,6 +112,100 @@ class APIController extends Controller
                     }
                 }
             }
+
+            while(true) {
+                if(isset($data['client_id'])) {
+                    if(!is_numeric($data['client_id'])) {
+                        $this->msg = 'Failed to Add Record! Client ID must be numeric: \'' . $data['client_id'] . '\'';
+                        $errors++;
+                        break;
+                    } else {
+                        $result = Clients::where('id', '=', $data['client_id'])->get()->toArray();
+
+                        if (empty($result)) {
+                            $this->msg = 'Failed to Add Record! No Match Found For Client \'' . $data['client_id'] . '\'';
+                            $errors++;
+                            break;
+                        } else {
+                            $data['client_id'] = $result[0]['id'];
+                        }
+                    }
+                }
+
+                if(isset($data['product_id'])) {
+                    if(!is_numeric($data['product_id'])) {
+                        $this->msg = 'Failed to Add Record! Product ID must be numeric: \'' . $data['product_id'] . '\'';
+                        $errors++;
+                        break;
+                    } else {
+                        $result = Products::where([['id', '=', $data['product_id']], ['client_id', '=', $data['client_id']]])->get()->toArray();
+
+                        if (empty($result)) {
+                            $this->msg = 'Failed to Add Record! No Match Found For Product \'' . $data['product_id'] . '\'';
+                            $errors++;
+                            break;
+                        } else {
+                            $data['product_id'] = $result[0]['id'];
+                        }
+                    }
+                }
+
+                if(isset($data['mid_id'])) {
+                    if(!is_numeric($data['mid_id'])) {
+                        $this->msg = 'Failed to Add Record! MID ID must be numeric: \'' . $data['mid_id'] . '\'';
+                        $errors++;
+                        break;
+                    } else {
+                        $result = MIDs::where('id', '=', $data['mid_id'])->get()->toArray();
+
+                        if (empty($result)) {
+                            $this->msg = 'Failed to Add Record! No Match Found For MID ID: \'' . $data['mid_id'] . '\'';
+                            $errors++;
+                            break;
+                        } else {
+                            $data['mid_id'] = $result[0]['id'];
+                        }
+                    }
+                }
+
+                if(isset($data['card_association_id'])) {
+                    if(!is_numeric($data['card_association_id'])) {
+                        $this->msg = 'Failed to Add Record! Card Association ID must be numeric: \'' . $data['card_association_id'] . '\'';
+                        $errors++;
+                        break;
+                    } else {
+                        $result = CardAssociations::where('id', '=', $data['card_association_id'])->get()->toArray();
+
+                        if (empty($result)) {
+                            $this->msg = 'Failed to Add Record! No Match Found For Card Association ID: \'' . $data['card_association_id'] . '\'';
+                            $errors++;
+                            break;
+                        } else {
+                            $data['card_association_id'] = $result[0]['id'];
+                        }
+                    }
+                }
+
+                if(isset($data['currency_id'])) {
+                    if(!is_numeric($data['currency_id'])) {
+                        $this->msg = 'Failed to Add Record! Currency ID must be numeric: \'' . $data['currency_id'] . '\'';
+                        $errors++;
+                        break;
+                    } else {
+                        $result = Currencies::where('id', '=', $data['currency_id'])->get()->toArray();
+
+                        if (empty($result)) {
+                            $this->msg = 'Failed to Add Record! No Match Found For Currency ID: \'' . $data['currency_id'] . '\'';
+                            $errors++;
+                            break;
+                        } else {
+                            $data['currency_id'] = $result[0]['id'];
+                        }
+                    }
+                }
+
+                break;
+            }
         }
 
         if($errors === 0) {
@@ -136,7 +221,7 @@ class APIController extends Controller
             if($success) {
                 $this->success = $success;
                 $this->code = 200;
-                $this->msg = 'Record successfully added: ' . $request->input('name');
+                $this->msg = 'Record successfully added: ' . $request->input($this->identifier_field);
             }
         }
 
@@ -179,6 +264,100 @@ class APIController extends Controller
                     }
                 }
             }
+
+            while(true) {
+                if(isset($data['client_id'])) {
+                    if(!is_numeric($data['client_id'])) {
+                        $this->msg = 'Failed to Edit Record! Client ID must be numeric: \'' . $data['client_id'] . '\'';
+                        $errors++;
+                        break;
+                    } else {
+                        $result = Clients::where('id', '=', $data['client_id'])->get()->toArray();
+
+                        if (empty($result)) {
+                            $this->msg = 'Failed to Edit Record! No Match Found For Client \'' . $data['client_id'] . '\'';
+                            $errors++;
+                            break;
+                        } else {
+                            $data['client_id'] = $result[0]['id'];
+                        }
+                    }
+                }
+
+                if(isset($data['product_id'])) {
+                    if(!is_numeric($data['product_id'])) {
+                        $this->msg = 'Failed to Edit Record! Product ID must be numeric: \'' . $data['product_id'] . '\'';
+                        $errors++;
+                        break;
+                    } else {
+                        $result = Products::where('id', '=', $data['product_id'])->get()->toArray();
+
+                        if (empty($result)) {
+                            $this->msg = 'Failed to Edit Record! No Match Found For Product \'' . $data['product_id'] . '\'';
+                            $errors++;
+                            break;
+                        } else {
+                            $data['product_id'] = $result[0]['id'];
+                        }
+                    }
+                }
+
+                if(isset($data['mid_id'])) {
+                    if(!is_numeric($data['mid_id'])) {
+                        $this->msg = 'Failed to Edit Record! MID ID must be numeric: \'' . $data['mid_id'] . '\'';
+                        $errors++;
+                        break;
+                    } else {
+                        $result = MIDs::where('id', '=', $data['mid_id'])->get()->toArray();
+
+                        if (empty($result)) {
+                            $this->msg = 'Failed to Edit Record! No Match Found For MID ID: \'' . $data['mid_id'] . '\'';
+                            $errors++;
+                            break;
+                        } else {
+                            $data['mid_id'] = $result[0]['id'];
+                        }
+                    }
+                }
+
+                if(isset($data['card_association_id'])) {
+                    if(!is_numeric($data['card_association_id'])) {
+                        $this->msg = 'Failed to Edit Record! Card Association ID must be numeric: \'' . $data['card_association_id'] . '\'';
+                        $errors++;
+                        break;
+                    } else {
+                        $result = CardAssociations::where('id', '=', $data['card_association_id'])->get()->toArray();
+
+                        if (empty($result)) {
+                            $this->msg = 'Failed to Edit Record! No Match Found For Card Association ID: \'' . $data['card_association_id'] . '\'';
+                            $errors++;
+                            break;
+                        } else {
+                            $data['card_association_id'] = $result[0]['id'];
+                        }
+                    }
+                }
+
+                if(isset($data['currency_id'])) {
+                    if(!is_numeric($data['currency_id'])) {
+                        $this->msg = 'Failed to Edit Record! Currency ID must be numeric: \'' . $data['currency_id'] . '\'';
+                        $errors++;
+                        break;
+                    } else {
+                        $result = Currencies::where('id', '=', $data['currency_id'])->get()->toArray();
+
+                        if (empty($result)) {
+                            $this->msg = 'Failed to Edit Record! No Match Found For Currency ID: \'' . $data['currency_id'] . '\'';
+                            $errors++;
+                            break;
+                        } else {
+                            $data['currency_id'] = $result[0]['id'];
+                        }
+                    }
+                }
+
+                break;
+            }
         }
 
         if($errors === 0) {
@@ -186,22 +365,6 @@ class APIController extends Controller
             $record = $class::find($id);
 
             if (!empty($record)) {
-                if($this->table != 'clients') {
-                    $client_match = DB::table($this->table . ' as x')
-                        ->join('clients', function ($join) use ($user_id) {
-                            $join->on('x.client_id', '=', 'clients.id')
-                                ->where('clients.user_id', '=', $user_id);
-                        })
-                        ->select('x.*')
-                        ->where('x.id','=',$id)
-                        ->get()
-                        ->toArray();
-
-                    if(empty($client_match)) {
-                        $errors++;
-                    }
-                }
-
                 if($errors === 0) {
                     foreach ($data as $key => $value) {
                         $record->$key = $value;
@@ -212,11 +375,10 @@ class APIController extends Controller
                     if ($success) {
                         $this->success = $success;
                         $this->code = 200;
-                        $this->msg = 'Record successfully updated: ' . $request->input('name');
+                        $this->msg = 'Record successfully updated: ' . $request->input($this->identifier_field);
                     }
                 }
             }
-
         }
 
         return response()->json(Response::arrayResponse($this->success,$this->code,$this->msg,$this->data));
@@ -233,31 +395,13 @@ class APIController extends Controller
     {
         $user_id = (isset($request->user()->id)) ? $request->user()->id : null;
 
-        $class = $this->class;
+        if(isset($user_id) && is_numeric($user_id)) {
+            $class = $this->class;
 
-        if($this->table === 'clients') {
-            if ($class::where([['id', '=', $id], ['user_id', '=', $user_id]])->delete()) {
+            if ($class::where('id', '=', $id)->delete()) {
                 $this->success = true;
                 $this->code = 200;
                 $this->msg = 'Successfully deleted record.';
-            }
-        } else {
-            $client_match = DB::table($this->table . ' as x')
-                ->join('clients', function ($join) use ($user_id) {
-                    $join->on('x.client_id', '=', 'clients.id')
-                        ->where('clients.user_id', '=', $user_id);
-                })
-                ->select('x.*')
-                ->where('x.id','=',$id)
-                ->get()
-                ->toArray();
-
-            if(!empty($client_match)) {
-                if ($class::where('id', '=', $id)->delete()) {
-                    $this->success = true;
-                    $this->code = 200;
-                    $this->msg = 'Successfully deleted record.';
-                }
             }
         }
 

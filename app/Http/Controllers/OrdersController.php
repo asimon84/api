@@ -2,8 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Response;
-
 class OrdersController extends APIController
 {
     protected $table = 'orders';
@@ -11,4 +9,6 @@ class OrdersController extends APIController
     protected $class = 'App\\API\\Orders\\Orders';
 
     protected $fields_class = 'App\\API\\Orders\\OrdersFields';
+
+    protected $identifier_field = 'order_id';
 }
